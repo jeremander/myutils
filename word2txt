@@ -1,0 +1,41 @@
+#!/usr/bin/env python3
+"""Converts a Microsoft Word .docx file into a text file."""
+
+import argparse
+from pathlib import Path
+import sys
+import textract
+from unidecode import unidecode
+
+
+if __name__ == '__main__':
+
+    parser = argparse.ArgumentParser(description = __doc__)
+    parser.add_argument('infiles', nargs = '+', help = 'input files (doc or docx)')
+    parser.add_argument('-a', '--ascii', action = 'store_true', help = 'decode to ASCII')
+    parser.add_argument('-o', '--output-dir', help = 'output directory', default = None)
+    args = parser.parse_args()
+
+    if args.output_dir:
+        if (not Path(args.output_dir).is_dir()):
+            print(f"ERROR: {args.output_dir} is not a directory.")
+            sys.exit(1)
+
+    for infile in args.infiles:
+        path = Path(infile)
+        if path.exists():
+            if (path.suffix in ['.doc', '.docx']):
+                text = textract.process(str(path)).decode('utf-8')
+                if args.ascii:
+                    text = unidecode(text)
+                encoding = 'ascii' if args.ascii else 'utf-8'
+                newpath = path.with_suffix(path.suffix + '.txt')
+                if args.output_dir:
+                    newpath = Path(args.output_dir) / newpath.name
+                print(f"Writing {encoding} text to: {newpath}.")
+                with open(newpath, 'w') as f:
+                    f.write(text)
+            else:
+                print(f"WARNING: {path} is not a .doc or .docx file. Skipping.")
+        else:
+            print(f"ERROR: {path} does not exist.")

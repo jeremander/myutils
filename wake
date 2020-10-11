@@ -1,0 +1,42 @@
+#!/usr/bin/env python3
+"""Invokes rtcwake to wake at a specified time (today).
+
+Prompts the user with a dialog before doing so."""
+
+import argparse
+from datetime import datetime, timedelta
+import subprocess
+
+def get_date(date_tokens: list[str]) -> str:
+    full_date_fmt = '%Y-%m-%d %H:%M'
+    if (len(date_tokens) >= 2):
+        dt = datetime.strptime(' '.join(date_tokens[:2]), full_date_fmt)
+    else:
+        now = datetime.now()
+        tok = date_tokens[0]
+        [hour, minute] = map(int, tok.split(':'))
+        dt = datetime(now.year, now.month, now.day, hour, minute)
+        if (now.strftime('%H:%M') > tok):  # tomorrow
+            dt = dt + timedelta(days = 1)
+    return dt.strftime(full_date_fmt)
+
+
+if __name__ == '__main__':
+
+    parser = argparse.ArgumentParser(description = __doc__, formatter_class = argparse.RawDescriptionHelpFormatter)
+    parser.add_argument('time', nargs = '+', help = 'time to wake (valid formats are YYYY-MM-DD hh:mm OR hh:mm)')
+    parser.add_argument('-m', '--mode', choices = ('freeze', 'mem', 'disk', 'off', 'no'), default = 'mem', help = 'standby mode')
+    parser.add_argument('-p', '--prompt-timeout', type = int, const = 60, nargs = '?', help = 'seconds to wait on user prompt before forcing sleep')
+    args = parser.parse_args()
+
+    if (args.prompt_timeout is not None):
+        prompt_cmd = ['zenity', '--no-wrap', '--question', '--timeout', str(args.prompt_timeout), '--text', f'Suspend the system?\nThis dialog will timeout in {args.prompt_timeout} seconds, after which the system will suspend.']
+        ret = subprocess.run(prompt_cmd)
+        suspend = (ret.returncode == 0)
+    else:
+        suspend = True
+
+    if suspend:
+        cmd = ['rtcwake', '--date', get_date(args.time), '-m', args.mode]
+        print(' '.join(cmd))
+        subprocess.run(cmd)
