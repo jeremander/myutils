@@ -1,13 +1,15 @@
 #!/usr/bin/env python3
-"""Invokes rtcwake to wake at a specified time (today).
+"""Invokes rtcwake to wake at a specified time.
 
 Prompts the user with a dialog before doing so."""
 
 import argparse
 from datetime import datetime, timedelta
 import subprocess
+from typing import List
 
-def get_date(date_tokens: list[str]) -> str:
+
+def get_date(date_tokens: List[str]) -> str:
     full_date_fmt = '%Y-%m-%d %H:%M'
     if (len(date_tokens) >= 2):
         dt = datetime.strptime(' '.join(date_tokens[:2]), full_date_fmt)
