@@ -4,6 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "myutils"
+version = "1.1.0"
 authors = [
     {name = "Jeremy Silver", email = "jeremys@nessiness.com"},
 ]
@@ -24,8 +25,17 @@ dependencies = [
     "unidecode",  # normalize Unicode
 ]
 
+[tool.setuptools]
+packages = ["makepw"]
+py-modules = ["docx2txt", "id_file_versions", "rust_deps", "ytsplit"]
+
 [project.scripts]
-my-script = "my_package.module:function"
+docx2txt = "docx2txt:main"
+id-file-versions = "id_file_versions:main"
+makepw-strong = "makepw.makepw_strong:main"
+makepw-xkcd = "makepw.makepw_xkcd:main"
+rust-deps = "rust_deps:main"
+ytsplit = "ytsplit:main"
 
 [tool.mypy]
 exclude = [

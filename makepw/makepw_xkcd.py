@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 
 """
-Generates an xkcd-style password using a cryptographically secure random source.\n
-The password is a sequence of words sampled randomly from a dictionary.\n
-User provides a length (in words) and a dictionary file (optional).\n
+Generates an xkcd-style password using a cryptographically secure random source.
+The password is a sequence of words sampled randomly from a dictionary.
+User provides a length (in words) and a dictionary file (optional).
 """
 
-import argparse
+from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser, RawDescriptionHelpFormatter
 import json
 import math
 from pathlib import Path
@@ -19,7 +19,8 @@ DEFAULT_DICTFILE = Path(__file__).with_name('mydict.json')
 
 def make_xkcd_password(n, dictfile = DEFAULT_DICTFILE):
     """Makes a password by randomly sampling n words from Webster's dictionary and concatenating them, using camel case."""
-    dictionary = json.load(open(dictfile, 'r'))
+    with open(dictfile) as f:
+        dictionary = json.load(f)
     words = sorted(dictionary.keys())
     pw_words = []
     pw = ''
@@ -38,14 +39,24 @@ def make_xkcd_password(n, dictfile = DEFAULT_DICTFILE):
         print("")
     return (pw, entropy)
 
-if __name__ == "__main__":
-
-    p = argparse.ArgumentParser(description = __doc__)
+def main():
+    class Formatter(ArgumentDefaultsHelpFormatter, RawDescriptionHelpFormatter):
+        pass
+    p = ArgumentParser(description = __doc__, formatter_class = Formatter)
     p.add_argument('length', help = 'length of password in words', type = int)
-    p.add_argument('--dictfile', default = DEFAULT_DICTFILE, help = "dictionary file")
+    p.add_argument('-d', '--dictfile', default = DEFAULT_DICTFILE, help = 'dictionary file')
     args = p.parse_args()
 
-    (pw, entropy) = make_xkcd_password(args.length, args.dictfile)
+    try:
+        (pw, entropy) = make_xkcd_password(args.length, args.dictfile)
+    except FileNotFoundError as e:
+        p.error(e)
 
     print("\nGenerated %d-long password with %.3f bits of entropy:\n" % (len(pw), entropy))
     print(pw + '\n')
+
+
+if __name__ == "__main__":
+
+    main()
+

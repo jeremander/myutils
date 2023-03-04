@@ -44,6 +44,7 @@ class YoutubeSplitter:
     proxy: Optional[str] = None
     trim: float = 1.0
     metadata: Optional[Metadata] = None
+    track_path: str = ''
     def read_track_list(self, headers_as_albums = True) -> Tracks:
         tracks = []
         with open(self.track_list) as f:
@@ -91,11 +92,11 @@ class YoutubeSplitter:
         return grouped
     def _split_track_group(self, output_dir: Path, tracks: Tracks) -> None:
         output_dir.mkdir(exist_ok = True)
-        ext = Path(track_path).suffix
+        ext = Path(self.track_path).suffix
         num_tracks = len(tracks)
         for (i, track) in enumerate(tqdm(tracks)):
             output_path = str(output_dir / (fix_name(track.name) + ext))
-            cmd = ['ffmpeg', '-y', '-ss', str(track.start), '-i', track_path, '-c', 'copy']
+            cmd = ['ffmpeg', '-y', '-ss', str(track.start), '-i', self.track_path, '-c', 'copy']
             if (track.duration is not None):
                 cmd += ['-t', str(int(track.duration))]
             if self.metadata:
@@ -124,8 +125,7 @@ class YoutubeSplitter:
         else:
             self._split_track_group(output_dir, tracks)
 
-
-if __name__ == '__main__':
+def main() -> None:
     parser = argparse.ArgumentParser(formatter_class = argparse.ArgumentDefaultsHelpFormatter)
     input_group = parser.add_mutually_exclusive_group(required = True)
     input_group.add_argument('-u', '--url', help = 'URL of YouTube video to download')
@@ -150,12 +150,17 @@ if __name__ == '__main__':
     splitter = YoutubeSplitter(args.tracks, args.output_dir, proxy = args.proxy, trim = args.trim, metadata = metadata)
 
     if args.url:
-        track_path = splitter.download_track(args.url)
+        splitter.track_path = splitter.download_track(args.url)
     else:
-        track_path = args.input_file
+        splitter.track_path = args.input_file
 
-    output_dir = args.output_dir if args.output_dir else Path(track_path).parent
+    output_dir = args.output_dir if args.output_dir else Path(splitter.track_path).parent
     splitter.output_dir = output_dir
 
     tracks = splitter.read_track_list(headers_as_albums = args.headers_as_albums)
     splitter.split_tracks(tracks)
+
+
+if __name__ == '__main__':
+
+    main()

@@ -9,8 +9,7 @@ import textract
 from unidecode import unidecode
 
 
-if __name__ == '__main__':
-
+def main():
     parser = argparse.ArgumentParser(description = __doc__)
     parser.add_argument('infiles', nargs = '+', help = 'input files (doc or docx)')
     parser.add_argument('-a', '--ascii', action = 'store_true', help = 'decode to ASCII')
@@ -40,3 +39,8 @@ if __name__ == '__main__':
                 print(f"WARNING: {path} is not a .doc or .docx file. Skipping.")
         else:
             print(f"ERROR: {path} does not exist.")
+
+
+if __name__ == '__main__':
+
+    main()

@@ -47,15 +47,16 @@ def identify_groups(path: Path, min_size: int, prefix_length: int, verbose: bool
     return {'groups' : new_groups, 'subgroups' : subgroups}
 
 
-if __name__ == '__main__':
-
+def main():
     parser = argparse.ArgumentParser(description = __doc__)
     parser.add_argument('input_dir', help = 'input directory')
     parser.add_argument('-s', '--min-size', type = int, default = 1, help = 'min size in MB of files to consider')
     parser.add_argument('-p', '--prefix-length', type = int, default = 8, help = 'length of prefix to match')
     args = parser.parse_args()
-
     input_dir = Path(args.input_dir)
     assert input_dir.exists() and input_dir.is_dir(), 'Must provide an existing directory.'
-
     identify_groups(input_dir, args.min_size, args.prefix_length, verbose = True)
+
+
+if __name__ == '__main__':
+    main()

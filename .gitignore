@@ -2,6 +2,8 @@
 .mypy_cache/
 __pycache__/
 *.pyc
+build/
+*egg-info/
 *tmp*
 
 noip_renew.py

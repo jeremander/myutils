@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 
 """
-Generates a strong password using a cryptographically secure random source.\n
-The password is a sequence of words sampled randomly from a dictionary.\n
-User provides a length (in characters) and an alphabet (subset of 'luno'), optionally.\n
+Generates a strong password using a cryptographically secure random source.
+The password is a sequence of words sampled randomly from a dictionary.
+User provides a length (in characters) and an alphabet (subset of 'luno'), optionally.
 """
 
 from math import log2
@@ -37,33 +37,31 @@ def make_strong_password(seq: str):
     entropy = sum([log2(len(alpha)) for alpha in alphabets])
     return (pw, entropy)
 
-if __name__ == "__main__":
 
+def main():
     desc = """
-        USAGE:
-            makepw_strong.py [LENGTH] [CLASS]
-            makepw_strong.py [SEQUENCE]
-        Generates a strong password using a cryptographically secure random source.\n
-        The password is a sequence of random characters sampled from a sequence of character classes.\n
-        User provides either a length (in characters) and a class, OR a sequence of classes.\n
-        The valid classes are:\n
-            l: lowercase
-            u: uppercase
-            n: numbers
-            o: others (punctuation)
-            c: consonants
-            v: vowels
-            t: letters
-            a: alphanumeric (letters & numbers)
-            f: left side of the keyboard
-            r: right side of the keyboard
-            F: left side of the keyboard (letters only)
-            R: right side of the keyboard (letters only)
-        """
-
+    USAGE:
+        makepw_strong.py [LENGTH] [CLASS]
+        makepw_strong.py [SEQUENCE]
+    Generates a strong password using a cryptographically secure random source.\n
+    The password is a sequence of random characters sampled from a sequence of character classes.\n
+    User provides either a length (in characters) and a class, OR a sequence of classes.\n
+    The valid classes are:\n
+        l: lowercase
+        u: uppercase
+        n: numbers
+        o: others (punctuation)
+        c: consonants
+        v: vowels
+        t: letters
+        a: alphanumeric (letters & numbers)
+        f: left side of the keyboard
+        r: right side of the keyboard
+        F: left side of the keyboard (letters only)
+        R: right side of the keyboard (letters only)
+    """
     def show_usage():
         print(desc)
-
     try:
         arg1 = sys.argv[1]
         if arg1.isdigit():  # a length
@@ -77,3 +75,7 @@ if __name__ == "__main__":
         print(pw + '\n')
     except Exception:
         show_usage()
+
+
+if __name__ == "__main__":
+    main()
