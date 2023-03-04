@@ -40,7 +40,7 @@ def make_strong_password(seq: str):
 if __name__ == "__main__":
 
     desc = """
-        USAGE: 
+        USAGE:
             makepw_strong.py [LENGTH] [CLASS]
             makepw_strong.py [SEQUENCE]
         Generates a strong password using a cryptographically secure random source.\n
@@ -68,11 +68,12 @@ if __name__ == "__main__":
         arg1 = sys.argv[1]
         if arg1.isdigit():  # a length
             alpha = sys.argv[2] if (len(sys.argv) >= 3) else 'p'
+            assert (len(alpha) == 1)
             seq = alpha * int(arg1)
         else:  # a sequence
             seq = arg1
         (pw, entropy) = make_strong_password(seq)
         print("\nGenerated %d-long password with %.3f bits of entropy:\n" % (len(pw), entropy))
         print(pw + '\n')
-    except:
+    except Exception:
         show_usage()

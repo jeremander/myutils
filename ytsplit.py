@@ -2,22 +2,40 @@
 """Downloads audio from YouTube and splits it according to a given file containing track names and start times."""
 
 import argparse
+from collections import defaultdict
 from dataclasses import dataclass
 from pathlib import Path
+import subprocess
+import sys
+from typing import Any, Dict, List, Optional
+
 from pytimeparse.timeparse import timeparse
 import subprocess_tee
 from tqdm import tqdm
-from typing import Any, Dict, List, Optional, Tuple
 
 
-Tracks = List[Tuple[str, float]]
+@dataclass
+class Track:
+    name: str
+    album: Optional[str]
+    start: float
+    duration: Optional[float] = None
+
+Tracks = List[Track]
 Metadata = Dict[str, Any]
 
 METADATA_FIELDS = ['artist', 'composer', 'album', 'genre', 'description']
 
 def check_output(cmd: List[str], verbose: bool = False) -> str:
     print(' '.join(cmd))
-    return subprocess_tee.run(cmd, tee = verbose).stdout
+    try:
+        return subprocess_tee.run(cmd, tee = verbose, check = True).stdout
+    except subprocess.CalledProcessError as e:
+        print(e.stderr, file = sys.stderr)
+        raise e
+
+def fix_name(name: str) -> str:
+    return name.replace('/', ' - ')  # slash conflicts with paths
 
 @dataclass
 class YoutubeSplitter:
@@ -26,14 +44,29 @@ class YoutubeSplitter:
     proxy: Optional[str] = None
     trim: float = 1.0
     metadata: Optional[Metadata] = None
-    def read_track_list(self) -> Tracks:
-        pairs = []
+    def read_track_list(self, headers_as_albums = True) -> Tracks:
+        tracks = []
         with open(self.track_list) as f:
+            album = None
+            start = 0.0
             for line in f:
                 if (line := line.strip()):
-                    time_str, track_name = line.split(maxsplit = 1)
-                    pairs.append((track_name, timeparse(time_str)))
-        return pairs
+                    try:
+                        toks = line.split()
+                        time_str = toks[-1]
+                        track_name = ' '.join(toks[:-1])
+                        start = timeparse(time_str)
+                        assert (start is not None), f'invalid time: {time_str}'
+                        tracks.append(Track(track_name, album, start))
+                    except (AssertionError, ValueError):
+                        # assume the line is an album title
+                        if headers_as_albums:
+                            album = line
+        for (i, track) in enumerate(tracks[:-1]):
+            # the end is the next track's start, minus the trim duration
+            end = tracks[i + 1].start - self.trim
+            track.duration = end - track.start
+        return tracks
     def download_track(self, url: str) -> str:
         print(f'Downloading {url} as MP3...')
         fmt = './%(title)s.%(ext)s'
@@ -47,28 +80,50 @@ class YoutubeSplitter:
             if line.startswith(prefix):
                 return line.removeprefix(prefix).strip()
         raise ValueError('could not retrieve download destination path')
-    def split_tracks(self, track_path: str, tracks: Tracks) -> None:
-        output_dir = Path(self.output_dir) if self.output_dir else Path(track_path).parent
+    def group_tracks_by_album(self, tracks: Tracks) -> Dict[Optional[str], List[Track]]:
+        """Groups tracks by album."""
+        grouped = defaultdict(list)
+        for track in tracks:
+            grouped[track.album].append(track)
+        for group in grouped.values():
+            names = [track.name for track in group]
+            assert (len(names) == len(set(names))), 'duplicate track name'
+        return grouped
+    def _split_track_group(self, output_dir: Path, tracks: Tracks) -> None:
         output_dir.mkdir(exist_ok = True)
         ext = Path(track_path).suffix
         num_tracks = len(tracks)
-        for (i, (track_name, start)) in enumerate(tqdm(tracks)):
-            output_path = str(output_dir / (track_name + ext))
-            if (i < num_tracks - 1):  # the end is the next track's start, minus the trim duration
-                end: Optional[float] = tracks[i + 1][1] - self.trim
-            else:
-                end = None
-            cmd = ['ffmpeg', '-y', '-ss', str(start), '-i', track_path, '-c', 'copy']
-            if (end is not None):
-                cmd += ['-t', str(end - start)]
+        for (i, track) in enumerate(tqdm(tracks)):
+            output_path = str(output_dir / (fix_name(track.name) + ext))
+            cmd = ['ffmpeg', '-y', '-ss', str(track.start), '-i', track_path, '-c', 'copy']
+            if (track.duration is not None):
+                cmd += ['-t', str(int(track.duration))]
             if self.metadata:
                 if self.metadata.get('label_tracks', False):
                     cmd += ['-metadata', f'track={i + 1}/{num_tracks}']
                 for field in METADATA_FIELDS:
-                    if (field in self.metadata):
-                        cmd += ['-metadata', field + '=' + self.metadata[field]]
+                    val = None
+                    if (field == 'album') and track.album:
+                        val = track.album
+                    elif (field in self.metadata):
+                        val = self.metadata[field]
+                    if val:
+                        cmd += ['-metadata', field + '=' + val]
             cmd.append(output_path)
             check_output(cmd, verbose = False)
+    def split_tracks(self, tracks: Tracks) -> None:
+        output_dir = Path(self.output_dir or Path.cwd())
+        grouped = self.group_tracks_by_album(tracks)
+        if (len(grouped) > 1):
+            for (album, group) in grouped.items():
+                # make a subdirectory for each album
+                if (album is not None):
+                    print('\n' + album)
+                album_dir = output_dir if (album is None) else (output_dir / fix_name(album))
+                self._split_track_group(album_dir, group)
+        else:
+            self._split_track_group(output_dir, tracks)
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(formatter_class = argparse.ArgumentDefaultsHelpFormatter)
@@ -80,7 +135,8 @@ if __name__ == '__main__':
     parser.add_argument('--proxy', help = 'proxy HOST:PORT to use')
     parser.add_argument('-t', '--trim', default = 1.0, type = float, help = 'trim this many seconds from the end of each track')
     metadata_gp = parser.add_argument_group(title = 'metadata arguments')
-    metadata_gp.add_argument('--label-tracks', action = 'store_true', help = 'whether to label tracks in order')
+    metadata_gp.add_argument('--label-tracks', action = 'store_true', help = 'whether to label tracks with numbers in order')
+    metadata_gp.add_argument('--headers-as-albums', action = 'store_true', help = 'whether to use section headers as album titles')
     for field in METADATA_FIELDS:
         metadata_gp.add_argument('--' + field)
     args = parser.parse_args()
@@ -97,5 +153,9 @@ if __name__ == '__main__':
         track_path = splitter.download_track(args.url)
     else:
         track_path = args.input_file
-    tracks = splitter.read_track_list()
-    splitter.split_tracks(track_path, tracks)
+
+    output_dir = args.output_dir if args.output_dir else Path(track_path).parent
+    splitter.output_dir = output_dir
+
+    tracks = splitter.read_track_list(headers_as_albums = args.headers_as_albums)
+    splitter.split_tracks(tracks)

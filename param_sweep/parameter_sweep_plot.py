@@ -57,7 +57,7 @@ def main():
     yvar = params['y_var']
     assert (yvar in df.columns), "variable '{}' must be a data column".format(yvar)
 
-    # get the path prefix 
+    # get the path prefix
     if (args.prefix is None):
         outfile_prefix = os.path.splitext(params['data'])[0]
     else:
@@ -101,7 +101,7 @@ def main():
     for var in input_cols:
         if (var in params):  # get values from the config file
             kwargs[var] = try_eval(params[var.lower()])
-        else:  # consider all possible values in the table 
+        else:  # consider all possible values in the table
             kwargs[var] = sorted(set(df[var]))
     xvals = sorted(set(df[xvar]))
 

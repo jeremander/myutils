@@ -2,11 +2,12 @@
 """Identifies groups of files that are likely to be "versions" of the same file, based on the filenames and extensions."""
 
 import argparse
-from datetime import datetime
 from collections import defaultdict
-from humanize import naturalsize
+from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Tuple
+
+from humanize import naturalsize
 
 
 TIME_FMT = '%Y-%m-%d %H:%M:%S'
@@ -39,7 +40,7 @@ def identify_groups(path: Path, min_size: int, prefix_length: int, verbose: bool
         print(str(path))
         for new_group in new_groups.values():
             print('-' * 20)
-            for (filename, size, ctime) in new_group:
+            for (filename, size, _) in new_group:
                 # print(f'\t{naturalsize(size)} | {ctime} | {filename}')
                 print(f'\t{naturalsize(size)} | {filename}')
         print('-' * 20 + '\n')

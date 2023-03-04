@@ -6,13 +6,16 @@ The password is a sequence of words sampled randomly from a dictionary.\n
 User provides a length (in words) and a dictionary file (optional).\n
 """
 
-import secrets
-import math
 import argparse
 import json
+import math
+from pathlib import Path
+import secrets
+
 
 # words of length 1-8, all lowercase
-DEFAULT_DICTFILE = '/Users/jeremander/Programming/scripts/makepw/mydict.json'
+DEFAULT_DICTFILE = Path(__file__).with_name('mydict.json')
+
 
 def make_xkcd_password(n, dictfile = DEFAULT_DICTFILE):
     """Makes a password by randomly sampling n words from Webster's dictionary and concatenating them, using camel case."""
@@ -20,7 +23,7 @@ def make_xkcd_password(n, dictfile = DEFAULT_DICTFILE):
     words = sorted(dictionary.keys())
     pw_words = []
     pw = ''
-    for i in range(n):
+    for _ in range(n):
         word = secrets.choice(words)
         pw_words.append(word)
         pw += word[0].upper() + word[1:]  # camel case

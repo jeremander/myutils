@@ -1,0 +1,95 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "myutils"
+authors = [
+    {name = "Jeremy Silver", email = "jeremys@nessiness.com"},
+]
+description = "Miscellaneous utilities and scripts"
+readme = "README.md"
+requires-python = ">=3.7"
+license = {text = "BSD-3-Clause"}
+dependencies = [
+    "dill",  # pickling
+    "humanize",  # natural time/size
+    "matplotlib",  # plotting
+    "networkx",  # graph theory
+    "parsec",  # parsing
+    "pytimeparse",  # parse time expressions
+    "subprocess_tee",  # teed subprocesses
+    "textract",  # extract text from various types
+    "tqdm",  # progress bars
+    "unidecode",  # normalize Unicode
+]
+
+[project.scripts]
+my-script = "my_package.module:function"
+
+[tool.mypy]
+exclude = [
+    "makepw/old",
+    "old"
+]
+ignore_missing_imports = true
+
+[tool.ruff]
+target-version = "py310"
+line-length = 10000
+
+# rules to include
+select = ["E", "F"]
+extend-select = [
+    "A",  # builtins
+    "ANN",  # annotations
+    "B",  # bugbear
+    "C",  # mccabe (complexity)
+    "C4",  # comprehensions
+    "D",  # docstrings
+    "I",  # isort (import order)
+    "ICN",  # import conventions
+    "PT",  # pytest style
+    "PTH",  # pathlib
+    "RET",  # return statements
+    "RUF100",  # flag unused noqa
+    "T10",  # debugger
+    "UP",  # upgrades
+]
+
+# rules to ignore
+ignore = [
+    "ANN",
+    "D",
+    "PT018",
+    "PTH123",
+    "RET504",
+    "RET505",
+    "UP"
+]
+
+# paths to exclude
+exclude = [
+    ".venv",
+    "makepw/old/",
+    "old/",
+    "param_sweep",
+    "tmp*"
+]
+
+[tool.ruff.flake8-pytest-style]
+parametrize-names-type = "list"
+
+[tool.ruff.isort]
+# don't separate straight-style and 'from' imports for the same module
+force-sort-within-sections = true
+# force imports to the top of their section
+# force-to-top = ["package.utils"]
+# patterns to separate into auxiliary blocks, in the order specified
+# forced-separate = ["tests"]
+# modules to consider first-party
+# known-first-party = []
+# number of lines after each import section
+lines-after-imports = 2
+# whether to order imports by type, rather than strictly alphabetically
+order-by-type = false

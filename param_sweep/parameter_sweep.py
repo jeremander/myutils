@@ -57,7 +57,7 @@ def main():
     mod = importlib.import_module(params['module'])
     func = mod.__dict__[params['func']]
 
-    # get the path prefix 
+    # get the path prefix
     if (args.prefix is None):
         outfile_prefix = os.path.join(os.path.dirname(args.config), func.__name__)
     else:
