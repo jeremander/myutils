@@ -1,1 +1,1 @@
-Miscellaneous scripts.
+Miscellaneous utilities and scripts.

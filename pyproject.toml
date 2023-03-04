@@ -18,6 +18,7 @@ dependencies = [
     "matplotlib",  # plotting
     "networkx",  # graph theory
     "parsec",  # parsing
+    "pydot",  # graph visualization
     "pytimeparse",  # parse time expressions
     "subprocess_tee",  # teed subprocesses
     "textract",  # extract text from various types
@@ -26,8 +27,12 @@ dependencies = [
 ]
 
 [tool.setuptools]
+include-package-data = true
 packages = ["makepw"]
 py-modules = ["docx2txt", "id_file_versions", "rust_deps", "ytsplit"]
+
+[tool.setuptools.package-data]
+makepw = ["mydict.json"]
 
 [project.scripts]
 docx2txt = "docx2txt:main"
@@ -38,9 +43,12 @@ rust-deps = "rust_deps:main"
 ytsplit = "ytsplit:main"
 
 [tool.mypy]
+python_version = "3.11"
 exclude = [
+    "build",
     "makepw/old",
-    "old"
+    "old",
+    "venv"
 ]
 ignore_missing_imports = true
 

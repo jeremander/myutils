@@ -5,5 +5,9 @@ __pycache__/
 build/
 *egg-info/
 *tmp*
+*.jpg
+*.pdf
+*.png
+*.svg
 
 noip_renew.py
