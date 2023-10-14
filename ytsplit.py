@@ -5,6 +5,7 @@ import argparse
 from collections import defaultdict
 from dataclasses import dataclass
 from pathlib import Path
+import re
 import subprocess
 import sys
 from typing import Any, Dict, List, Optional
@@ -13,6 +14,8 @@ from pytimeparse.timeparse import timeparse
 import subprocess_tee
 from tqdm import tqdm
 
+
+YDL = 'yt-dlp'
 
 @dataclass
 class Track:
@@ -45,6 +48,7 @@ class YoutubeSplitter:
     trim: float = 1.0
     metadata: Optional[Metadata] = None
     track_path: str = ''
+    time_first: bool = False  # if True, the time comes before the name
     def read_track_list(self, headers_as_albums = True) -> Tracks:
         tracks = []
         with open(self.track_list) as f:
@@ -52,10 +56,14 @@ class YoutubeSplitter:
             start = 0.0
             for line in f:
                 if (line := line.strip()):
+                    print(line)
                     try:
                         toks = line.split()
-                        time_str = toks[-1]
-                        track_name = ' '.join(toks[:-1])
+                        if self.time_first:
+                            time_str, track_toks = toks[0], toks[1:]
+                        else:
+                            track_toks, time_str = toks[:-1], toks[-1]
+                        track_name = ' '.join(track_toks)
                         start = timeparse(time_str)
                         assert (start is not None), f'invalid time: {time_str}'
                         tracks.append(Track(track_name, album, start))
@@ -71,15 +79,15 @@ class YoutubeSplitter:
     def download_track(self, url: str) -> str:
         print(f'Downloading {url} as MP3...')
         fmt = './%(title)s.%(ext)s'
-        cmd = ['youtube-dl', '-x', '--audio-format', 'mp3', '-o', fmt]
+        cmd = [YDL, '-x', '--audio-format', 'mp3', '-o', fmt]
         if self.proxy:
             cmd += ['--proxy', self.proxy]
         cmd.append(url)
         output = check_output(cmd)
-        prefix = '[ffmpeg] Destination:'
+        prefix = re.compile(r'\[(ffmpeg|ExtractAudio)\] Destination: (.*)')
         for line in output.splitlines():
-            if line.startswith(prefix):
-                return line.removeprefix(prefix).strip()
+            if (match := prefix.match(line)):
+                return match.group(2).strip()
         raise ValueError('could not retrieve download destination path')
     def group_tracks_by_album(self, tracks: Tracks) -> Dict[Optional[str], List[Track]]:
         """Groups tracks by album."""
@@ -133,7 +141,7 @@ def main() -> None:
     parser.add_argument('tracks', help = 'file containing track list (each line contains start time, then track name)')
     parser.add_argument('-o', '--output-dir', help = 'output directory name')
     parser.add_argument('--proxy', help = 'proxy HOST:PORT to use')
-    parser.add_argument('-t', '--trim', default = 1.0, type = float, help = 'trim this many seconds from the end of each track')
+    parser.add_argument('-t', '--trim', default = 0.5, type = float, help = 'trim this many seconds from the end of each track')
     metadata_gp = parser.add_argument_group(title = 'metadata arguments')
     metadata_gp.add_argument('--label-tracks', action = 'store_true', help = 'whether to label tracks with numbers in order')
     metadata_gp.add_argument('--headers-as-albums', action = 'store_true', help = 'whether to use section headers as album titles')
