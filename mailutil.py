@@ -8,9 +8,11 @@ from functools import reduce
 import getpass
 import logging
 import sys
-from typing import Iterator, Optional
+from typing import Iterator, Optional, Union
 
-from imap_tools import AND, MailBox, OR
+import imap_tools
+from imap_tools import AND, OR, MailMessage
+from imap_tools.mailbox import Criteria
 from tqdm import tqdm
 
 
@@ -23,6 +25,17 @@ FIELDS = {
     'To' : 'to',
     'Date' : 'date_str'
 }
+
+class MailBox(imap_tools.MailBox):
+    def fetch(self, criteria: Criteria = 'ALL', charset: str = 'US-ASCII', limit: Optional[Union[int, slice]] = None, mark_seen = True, reverse = False, headers_only = False, chunk_size: int = 1) -> Iterator[MailMessage]:
+        message_parts = "(BODY{}[{}] UID FLAGS RFC822.SIZE)".format('' if mark_seen else '.PEEK', 'HEADER' if headers_only else '')
+        limit_range = slice(0, limit) if type(limit) is int else limit or slice(None)
+        assert type(limit_range) is slice
+        uids = tuple((reversed if reverse else iter)(self.uids(criteria, charset)))[limit_range]
+        for i in range(0, len(uids), chunk_size):
+            uid_chunk = uids[i : i + chunk_size]
+            for fetch_item in self._fetch_in_bulk(uid_chunk, message_parts, reverse):
+                yield self.email_message_class(fetch_item)
 
 @contextmanager
 def login(server: str, address: str, password: Optional[str] = None) -> Iterator[MailBox]:
@@ -47,11 +60,16 @@ def run_delete(args: Namespace) -> None:
     query = reduce(AND, queries)
     LOGGER.info(f'Delete query: {query}')
     with login(args.server, args.address) as mailbox:
-        uids = [msg.uid for msg in tqdm(mailbox.fetch(query))]
+        uids = [uid for msg in tqdm(mailbox.fetch(query)) if (uid := msg.uid)]
         LOGGER.info(f'Deleting {len(uids)} message(s)...')
         mailbox.delete(uids)
 
 # EXPORT
+
+def make_parser_export(parser: ArgumentParser) -> None:
+    parser.add_argument('--chunk-size', type = int, default = 50, help = 'number of e-mail headers to download in each request')
+    parser.add_argument('--start', type = int, default = 0, help = 'start index of first e-mail')
+    parser.add_argument('--stop', type = int, help = 'start index of first e-mail')
 
 def run_export(args: Namespace) -> None:
     with login(args.server, args.address) as mailbox:
@@ -60,7 +78,8 @@ def run_export(args: Namespace) -> None:
         writer.writerow(header)
         ctr = 0
         from_idx = list(FIELDS.values()).index('from_')
-        for msg in tqdm(mailbox.fetch(headers_only = True)):
+        limit = slice(args.start, args.stop)
+        for msg in tqdm(mailbox.fetch(headers_only = True, mark_seen = False, limit = limit, chunk_size = args.chunk_size)):
             ctr += 1
             row = []
             for field in FIELDS.values():
@@ -83,7 +102,8 @@ def main() -> None:
     subparsers = parser.add_subparsers(dest = 'subcommand')
     p_delete = subparsers.add_parser('delete', help = 'delete e-mails')
     make_parser_delete(p_delete)
-    subparsers.add_parser('export', help = 'export e-mail metadata to TSV file')
+    p_export = subparsers.add_parser('export', help = 'export e-mail metadata to TSV file')
+    make_parser_export(p_export)
     args = parser.parse_args()
     func = globals()[f'run_{args.subcommand}']
     func(args)

@@ -110,4 +110,4 @@ force-sort-within-sections = true
 # number of lines after each import section
 lines-after-imports = 2
 # whether to order imports by type, rather than strictly alphabetically
-order-by-type = false
+order-by-type = true

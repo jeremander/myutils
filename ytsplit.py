@@ -56,7 +56,7 @@ class YoutubeSplitter:
             start = 0.0
             for line in f:
                 if (line := line.strip()):
-                    print(line)
+                    # print(line)
                     try:
                         toks = line.split()
                         if self.time_first:
@@ -142,6 +142,7 @@ def main() -> None:
     parser.add_argument('-o', '--output-dir', help = 'output directory name')
     parser.add_argument('--proxy', help = 'proxy HOST:PORT to use')
     parser.add_argument('-t', '--trim', default = 0.5, type = float, help = 'trim this many seconds from the end of each track')
+    parser.add_argument('--time-first', action = 'store_true', help = 'time comes before track name in track list')
     metadata_gp = parser.add_argument_group(title = 'metadata arguments')
     metadata_gp.add_argument('--label-tracks', action = 'store_true', help = 'whether to label tracks with numbers in order')
     metadata_gp.add_argument('--headers-as-albums', action = 'store_true', help = 'whether to use section headers as album titles')
@@ -155,7 +156,7 @@ def main() -> None:
         if val:
             metadata[field] = val
 
-    splitter = YoutubeSplitter(args.tracks, args.output_dir, proxy = args.proxy, trim = args.trim, metadata = metadata)
+    splitter = YoutubeSplitter(args.tracks, args.output_dir, proxy = args.proxy, trim = args.trim, metadata = metadata, time_first = args.time_first)
 
     if args.url:
         splitter.track_path = splitter.download_track(args.url)
